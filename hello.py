@@ -1,6 +1,7 @@
 import http
 import logging
 import os
+from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable
 from urllib.parse import parse_qs
 
@@ -8,12 +9,25 @@ import structlog
 from fastapi import FastAPI, HTTPException, Request, Response
 from ulid import ULID
 
-app = FastAPI()
-
+# Note: keep this *before* the call to get_logger
 filtered = logging.DEBUG if os.getenv("STRUCTLOG_DEBUG") else logging.INFO
 structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(filtered))
 
 logger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> None:
+    # Remove uvicorn access logs to avoid duplicated logs
+    # Note: this means other stuff from uvicorn gets logged
+    # with a different format, but we don't really care
+    access_log = logging.root.manager.loggerDict.get("uvicorn.access")
+    if access_log:
+        access_log.disabled = True  # type: ignore[union-attr]
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
@@ -56,14 +70,6 @@ def health() -> str:
     return "ok"
 
 
-@app.on_event("startup")
-def startup() -> None:
-    # Remove uvicorn access logs to avoid duplicated logs
-    access_log = logging.root.manager.loggerDict.get("uvicorn.access")
-    if access_log:
-        access_log.disabled = True  # type: ignore[union-attr]
-
-
 @app.middleware("http")
 async def log_request(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -71,12 +77,13 @@ async def log_request(
     # Note: we replicate functionnality from uvicorn logging implementation, but
     #   - we log the /health route with a 'debug' level, so it's skipped by default
     #   - we log the request right away, before processing it
-    #   - we log the response in a separate event
-    #   - we add the request_id (here a ULID, but could be a request-id from a HTTP header)
+    #      note : the request id can also come from a http header if a load balancer is used
+    #   - we add the request_id to structlog's context variables
     #     to each subsequent logs
+    #   - we log the response as a separate event
+    request_id = str(ULID())
     structlog.contextvars.clear_contextvars()
 
-    request_id = str(ULID())
     structlog.contextvars.bind_contextvars(request_id=request_id)
 
     client = get_client_addr(request)
