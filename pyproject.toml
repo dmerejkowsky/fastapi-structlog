@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "fastapi-logs"
+version = "0.1.0"
+description = ""
+authors = ["Dimitri Merejkowsky <dimitri@dmerej.info>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.2"
+uvicorn = "^0.27.1"
+loguru = "^0.7.2"
+typer = "^0.9.0"
+python-ulid = "^2.2.0"
+structlog = "^24.1.0"
+better-exceptions = "^0.3.3"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.2.0"
+isort = "^5.13.2"
+mypy = "^1.8.0"
+ruff = "^0.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+files = "hello.py"
+allow_any_generics = false
+allow_incomplete_defs = false
+allow_subclassing_any = false
+allow_untyped_calls = false
+allow_untyped_decorators = false
+allow_untyped_defs = false
+check_untyped_defs = true
+enable_error_code = "ignore-without-code"
+ignore_missing_imports = false
+implicit_reexport=false
+no_implicit_optional = true
+pretty = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
