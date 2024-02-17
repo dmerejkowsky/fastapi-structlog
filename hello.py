@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Awaitable, Callable
 from urllib.parse import parse_qs
 
+import better_exceptions
 import structlog
 from fastapi import FastAPI, HTTPException, Request, Response
 from ulid import ULID
@@ -14,6 +15,10 @@ filtered = logging.DEBUG if os.getenv("STRUCTLOG_DEBUG") else logging.INFO
 structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(filtered))
 
 logger = structlog.get_logger()
+
+# So we *also* get nice tracebacks of un-handled exceptions, not just
+# when using logger.exception
+better_exceptions.hook()
 
 
 @asynccontextmanager
